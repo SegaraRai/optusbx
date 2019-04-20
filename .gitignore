@@ -1,0 +1,10 @@
+dist/
+/x86/
+/x64/
+
+*.bin
+*.zip
+
+.vs
+
+*.user
