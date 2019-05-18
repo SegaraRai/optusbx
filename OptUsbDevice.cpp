@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
@@ -117,19 +118,10 @@ void OptUsbDevice::SendProgram(std::byte* programData, std::size_t programSize) 
   optusbx::Sleep(mWait);
 
   {
-    //*
-    Send(EndpointData, programData, programSize, mTimeout);
-
-    if (alignedProgramSize != programSize) {
-      std::byte zeros[4]{};
-      Send(EndpointData, zeros, alignedProgramSize - programSize, mTimeout);
-    }
-    /*/
     auto alignedProgramData = std::make_unique<std::byte[]>(alignedProgramSize);
     std::memcpy(alignedProgramData.get(), programData, programSize);
     std::memset(alignedProgramData.get() + programSize, 0, alignedProgramSize - programSize);
     Send(EndpointData, alignedProgramData.get(), alignedProgramSize, mTimeout);
-    //*/
   }
 }
 
