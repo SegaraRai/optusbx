@@ -73,7 +73,7 @@ std::uint_fast32_t OptUsbDevice::Send32(std::uint_fast8_t number, std::uint_fast
 }
 
 
-void OptUsbDevice::SendProgram(std::byte* programData, std::size_t programSize) {
+void OptUsbDevice::SendProgram(const std::byte* programData, std::size_t programSize) {
   const auto alignedProgramSize = (programSize + 3) & ~static_cast<std::size_t>(3);
 
   {
@@ -126,7 +126,7 @@ void OptUsbDevice::SendProgram(std::byte* programData, std::size_t programSize) 
 }
 
 
-void OptUsbDevice::TransferProgram(std::byte* programData, std::size_t programSize) {
+void OptUsbDevice::TransferProgram(const std::byte* programData, std::size_t programSize) {
   ClaimInterface(0);
 
   //

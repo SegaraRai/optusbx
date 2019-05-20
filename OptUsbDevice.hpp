@@ -37,6 +37,6 @@ public:
 
   std::uint_fast32_t Receive32(std::uint_fast8_t number);
   std::uint_fast32_t Send32(std::uint_fast8_t number, std::uint_fast32_t code);
-  void SendProgram(std::byte* programData, std::size_t programSize);
-  void TransferProgram(std::byte* programData, std::size_t programSize);
+  void SendProgram(const std::byte* programData, std::size_t programSize);
+  void TransferProgram(const std::byte* programData, std::size_t programSize);
 };
