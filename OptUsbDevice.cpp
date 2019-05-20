@@ -22,7 +22,7 @@ OptUsbDevice::OptUsbDevice(LibUsb& libusb, unsigned int wait, unsigned int timeo
 std::uint_fast32_t OptUsbDevice::Receive32(std::uint_fast8_t number) {
   {
     std::byte data[2] = {
-      static_cast<std::byte>(CommandStatus),
+      static_cast<std::byte>(UsbCommandStatus),
       static_cast<std::byte>(number),
     };
 
@@ -47,7 +47,7 @@ std::uint_fast32_t OptUsbDevice::Receive32(std::uint_fast8_t number) {
 std::uint_fast32_t OptUsbDevice::Send32(std::uint_fast8_t number, std::uint_fast32_t code) {
   {
     std::byte data[6] = {
-      static_cast<std::byte>(CommandStatus),
+      static_cast<std::byte>(UsbCommandStatus),
       static_cast<std::byte>(0x80 | number),
       static_cast<std::byte>((code >> 0) & 0xFF),
       static_cast<std::byte>((code >> 8) & 0xFF),
@@ -78,7 +78,7 @@ void OptUsbDevice::SendProgram(const std::byte* programData, std::size_t program
 
   {
     std::byte data[3] = {
-      static_cast<std::byte>(CommandWrite),
+      static_cast<std::byte>(UsbCommandWrite),
       // 1 DWORD : program size
       static_cast<std::byte>(1),
       static_cast<std::byte>(0),
@@ -106,7 +106,7 @@ void OptUsbDevice::SendProgram(const std::byte* programData, std::size_t program
     const auto alignedProgramSizeInDWord = alignedProgramSize / 4;
 
     std::byte data[3] = {
-      static_cast<std::byte>(CommandWrite),
+      static_cast<std::byte>(UsbCommandWrite),
       // program size in DWORD
       static_cast<std::byte>((alignedProgramSizeInDWord >> 0) & 0xFF),
       static_cast<std::byte>((alignedProgramSizeInDWord >> 8) & 0xFF),

@@ -19,11 +19,11 @@ public:
   static constexpr std::uint_fast8_t EndpointCommand = 0x01;    // cmd_h
   static constexpr std::uint_fast8_t EndpointData    = 0x02;    // i_h (Data | LIBUSB_ENDPOINT_IN) / o_h (Data | LIBUSB_ENDPOINT_OUT)
 
-  static constexpr std::uint_fast8_t CommandCommand = 0x00;   // USB_CMD
-  static constexpr std::uint_fast8_t CommandRead    = 0x01;   // USB_READ
-  static constexpr std::uint_fast8_t CommandWrite   = 0x02;   // USB_WRITE
-  static constexpr std::uint_fast8_t CommandStatus  = 0x03;   // USB_STATUS
-  static constexpr std::uint_fast8_t CommandAck     = 0x04;   // USB_ACK
+  static constexpr std::uint_fast8_t UsbCommandCommand = 0x00;    // USB_CMD
+  static constexpr std::uint_fast8_t UsbCommandRead    = 0x01;    // USB_READ
+  static constexpr std::uint_fast8_t UsbCommandWrite   = 0x02;    // USB_WRITE
+  static constexpr std::uint_fast8_t UsbCommandStatus  = 0x03;    // USB_STATUS
+  static constexpr std::uint_fast8_t UsbCommandAck     = 0x04;    // USB_ACK
 
   static constexpr std::uint_fast8_t StatusBitPower = 1 << 0;
   static constexpr std::uint_fast8_t StatusBitReady = 1 << 1;
