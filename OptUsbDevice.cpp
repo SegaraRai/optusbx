@@ -1,12 +1,17 @@
+#define NOMINMAX
+
 #include "OptUsbDevice.hpp"
 
 #include "Sleep.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
+
+#include "AGBProgram.hpp"
 
 using namespace std::literals;
 
@@ -19,10 +24,54 @@ OptUsbDevice::OptUsbDevice(LibUsb& libusb, unsigned int wait, unsigned int timeo
 {}
 
 
+void OptUsbDevice::SendCommand(std::uint_fast32_t command, std::uint_fast32_t param1, std::uint_fast32_t param2, std::uint_fast32_t param3, std::uint32_t* retBuffer, std::uint_fast32_t retLength) {
+  std::byte data[18] = {
+    static_cast<std::byte>(UsbCommandCommand),
+    //
+    static_cast<std::byte>(4),
+    //
+    static_cast<std::byte>((command >> 0) & 0xFF),
+    static_cast<std::byte>((command >> 8) & 0xFF),
+    static_cast<std::byte>((command >> 16) & 0xFF),
+    static_cast<std::byte>((command >> 24) & 0xFF),
+    //
+    static_cast<std::byte>((param1 >> 0) & 0xFF),
+    static_cast<std::byte>((param1 >> 8) & 0xFF),
+    static_cast<std::byte>((param1 >> 16) & 0xFF),
+    static_cast<std::byte>((param1 >> 24) & 0xFF),
+    //
+    static_cast<std::byte>((param2 >> 0) & 0xFF),
+    static_cast<std::byte>((param2 >> 8) & 0xFF),
+    static_cast<std::byte>((param2 >> 16) & 0xFF),
+    static_cast<std::byte>((param2 >> 24) & 0xFF),
+    //
+    static_cast<std::byte>((param3 >> 0) & 0xFF),
+    static_cast<std::byte>((param3 >> 8) & 0xFF),
+    static_cast<std::byte>((param3 >> 16) & 0xFF),
+    static_cast<std::byte>((param3 >> 24) & 0xFF),
+  };
+  Send(EndpointCommand, data, sizeof(data), mTimeout);
+  if (retLength) {
+    std::byte data2[3] = {
+      static_cast<std::byte>(UsbCommandRead),
+      static_cast<std::byte>((retLength >> 0) & 0xFF),
+      static_cast<std::byte>((retLength >> 8) & 0xFF),
+    };
+    Send(EndpointCommand, data2, sizeof(data2), mTimeout);
+    Receive(EndpointData, reinterpret_cast<std::byte*>(retBuffer), retLength * sizeof(std::uint32_t), mTimeout);
+  }
+}
+
+
+void OptUsbDevice::SendCommand(std::uint_fast32_t command, std::uint_fast32_t param1, std::uint_fast32_t param2, std::uint_fast32_t param3) {
+  SendCommand(command, param1, param2, param3, nullptr, 0);
+}
+
+
 std::uint_fast32_t OptUsbDevice::Receive32(std::uint_fast8_t number) {
   {
     std::byte data[2] = {
-      static_cast<std::byte>(CommandStatus),
+      static_cast<std::byte>(UsbCommandStatus),
       static_cast<std::byte>(number),
     };
 
@@ -47,7 +96,7 @@ std::uint_fast32_t OptUsbDevice::Receive32(std::uint_fast8_t number) {
 std::uint_fast32_t OptUsbDevice::Send32(std::uint_fast8_t number, std::uint_fast32_t code) {
   {
     std::byte data[6] = {
-      static_cast<std::byte>(CommandStatus),
+      static_cast<std::byte>(UsbCommandStatus),
       static_cast<std::byte>(0x80 | number),
       static_cast<std::byte>((code >> 0) & 0xFF),
       static_cast<std::byte>((code >> 8) & 0xFF),
@@ -73,12 +122,12 @@ std::uint_fast32_t OptUsbDevice::Send32(std::uint_fast8_t number, std::uint_fast
 }
 
 
-void OptUsbDevice::SendProgram(std::byte* programData, std::size_t programSize) {
+void OptUsbDevice::SendProgram(const std::byte* programData, std::size_t programSize) {
   const auto alignedProgramSize = (programSize + 3) & ~static_cast<std::size_t>(3);
 
   {
     std::byte data[3] = {
-      static_cast<std::byte>(CommandWrite),
+      static_cast<std::byte>(UsbCommandWrite),
       // 1 DWORD : program size
       static_cast<std::byte>(1),
       static_cast<std::byte>(0),
@@ -106,7 +155,7 @@ void OptUsbDevice::SendProgram(std::byte* programData, std::size_t programSize) 
     const auto alignedProgramSizeInDWord = alignedProgramSize / 4;
 
     std::byte data[3] = {
-      static_cast<std::byte>(CommandWrite),
+      static_cast<std::byte>(UsbCommandWrite),
       // program size in DWORD
       static_cast<std::byte>((alignedProgramSizeInDWord >> 0) & 0xFF),
       static_cast<std::byte>((alignedProgramSizeInDWord >> 8) & 0xFF),
@@ -126,7 +175,7 @@ void OptUsbDevice::SendProgram(std::byte* programData, std::size_t programSize) 
 }
 
 
-void OptUsbDevice::TransferProgram(std::byte* programData, std::size_t programSize) {
+void OptUsbDevice::TransferProgram(const std::byte* programData, std::size_t programSize) {
   ClaimInterface(0);
 
   //
@@ -152,4 +201,51 @@ void OptUsbDevice::TransferProgram(std::byte* programData, std::size_t programSi
   }
 
   SendProgram(programData, programSize);
+}
+
+
+std::vector<std::byte> OptUsbDevice::ReadROM(ProgressCallback progressCallback) {
+  TransferProgram(reinterpret_cast<const std::byte*>(gAGBProgram), sizeof(gAGBProgram));
+
+  // wait for program starts
+  optusbx::Sleep(150);
+
+  std::uint32_t romInfo[3];
+  SendCommand(CMD_ROM_PROBE, 0, 0, 0, romInfo, 3);
+  const int_fast32_t romSize = romInfo[1];
+
+  if (progressCallback) {
+    progressCallback(0, romSize);
+  }
+
+  SendCommand(CMD_READ2, 0x08000000, romSize, 0, NULL, 0);
+
+  std::vector<std::byte> ret(romSize + 3);
+
+  std::byte* ptr = ret.data();
+  std::uint_fast32_t restSize = romSize;
+  while (restSize) {
+    const std::uint_fast32_t readSize = std::min<std::uint_fast32_t>(restSize, 0x1000);
+    const std::uint_fast32_t alignedReadSize = (readSize + 3) & ~static_cast<std::uint_fast32_t>(3);
+    const std::uint_fast32_t alignedReadSizeInDword = alignedReadSize >> 2;
+    std::byte data[64] = {
+      static_cast<std::byte>(UsbCommandRead),
+      static_cast<std::byte>((alignedReadSizeInDword >> 0) & 0xFF),
+      static_cast<std::byte>((alignedReadSizeInDword >> 8) & 0xFF),
+      static_cast<std::byte>(7),
+      static_cast<std::byte>(0),
+    };
+    Send(EndpointCommand, data, sizeof(data), mTimeout);
+    Receive(EndpointData, ptr, alignedReadSize, mTimeout);
+    restSize -= readSize;
+    ptr += readSize;
+
+    if (progressCallback) {
+      progressCallback(romSize - restSize, romSize);
+    }
+  }
+
+  ret.resize(romSize);
+
+  return ret;
 }

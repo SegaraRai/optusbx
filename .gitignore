@@ -1,8 +1,13 @@
+agb_prog.h
+
 dist/
 /x86/
 /x64/
 
 *.bin
+*.mb
+*.gba
+*.sav
 *.zip
 
 .vs
