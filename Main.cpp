@@ -35,7 +35,7 @@ int wmain(int argc, wchar_t* argv[]) {
 
   try {
     if (argc < 2) {
-      std::wcerr << L"optusbx v1.0.0"sv << std::endl << L"usage: "sv << argv[0] << L" <data.bin> [wait] [timeout]"sv << std::endl;
+      std::wcerr << L"optusbx v1.1.0"sv << std::endl << L"usage: "sv << argv[0] << L" <data.bin> [wait] [timeout]"sv << std::endl;
       return 1;
     }
 
