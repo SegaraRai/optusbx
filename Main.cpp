@@ -30,10 +30,29 @@ using namespace std::literals;
 // for Windows: use Unicode
 
 int wmain(int argc, wchar_t* argv[]) {
+  constexpr int DefaultWait = 30;
+  constexpr int DefaultTimeout = 5000;
+
   try {
-    if (argc != 2) {
-      std::wcerr << L"optusbx v1.0.0"sv << std::endl << L"usage: "sv << argv[0] << L" <data.bin>"sv << std::endl;
+    if (argc < 2) {
+      std::wcerr << L"optusbx v1.0.0"sv << std::endl << L"usage: "sv << argv[0] << L" <data.bin> [wait] [timeout]"sv << std::endl;
       return 1;
+    }
+
+    int wait = -1;
+    if (argc >= 3) {
+      wait = std::stoi(argv[2]);
+    }
+    if (wait < 0) {
+      wait = DefaultWait;
+    }
+
+    int timeout = -1;
+    if (argc >= 4) {
+      timeout = std::stoi(argv[3]);
+    }
+    if (timeout< 0) {
+      timeout = DefaultTimeout;
     }
 
     std::ifstream ifs;
@@ -67,7 +86,7 @@ int wmain(int argc, wchar_t* argv[]) {
       std::optional<OptUsbDevice> optUsbDevice;
 
       try {
-        optUsbDevice.emplace(libUsb, 50, 1000);
+        optUsbDevice.emplace(libUsb, wait, timeout);
       } catch (const OptUsbDevice::OpenError& error) {
         throw std::runtime_error("failed to open device; make sure that the device is connected and a proper driver is installed"s);
       }
